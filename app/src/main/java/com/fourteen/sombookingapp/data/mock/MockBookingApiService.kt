@@ -120,27 +120,3 @@ class MockBookingApiService : BookingApiService {
     private suspend fun simulateLatency() = delay((300L..900L).random().milliseconds)
 
 }
-
-/*
-
- * 
- * A: In a real app, the backend Database handles this using Transactions or Row Locks.
- *    However, if we had to handle it locally in Kotlin (like in a mock), 
- *    we would use a `Mutex` to prevent "Race Conditions".
- * 
- * 
- * val mutex = Mutex()
- * 
- * suspend fun createSafeBooking(slotId: String) {
- *     // mutex.withLock ensures that only ONE coroutine can run this block at a time.
- *     // If User A is in this block, User B has to wait outside until User A finishes.
- *     mutex.withLock {
- *         if (slotId !in bookedSlotIds) {
- *             bookedSlotIds.add(slotId)
- *             println("Booking Successful!")
- *         } else {
- *             println("Error: Slot already booked!")
- *         }
- *     }
- * }
- */
