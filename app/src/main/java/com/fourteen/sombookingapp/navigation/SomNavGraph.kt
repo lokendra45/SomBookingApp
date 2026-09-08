@@ -1,10 +1,9 @@
 ﻿package com.fourteen.sombookingapp.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavHostController
+import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.fourteen.sombookingapp.ui.screens.BookingScreen
 import com.fourteen.sombookingapp.ui.screens.MyBookingsScreen
@@ -13,18 +12,30 @@ import com.fourteen.sombookingapp.ui.screens.ServiceListScreen
 import com.fourteen.sombookingapp.viewmodel.BookingArgs
 
 @Composable
-fun SomNavHost(navController: NavHostController = rememberNavController()) {
+fun SomApp(
+    appState: SomAppState = rememberSomAppState()
+) {
+    SomNavHost(appState = appState)
+}
+
+@Composable
+fun SomNavHost(
+    appState: SomAppState,
+    modifier: Modifier = Modifier
+) {
+    val navController = appState.navController
     NavHost(
         navController = navController,
-        startDestination = NavigationRoute.ServiceList
+        startDestination = NavigationRoute.ServiceList,
+        modifier = modifier
     ) {
         composable<NavigationRoute.ServiceList> {
             ServiceListScreen(
                 onServiceClick = { serviceId ->
-                    navController.navigate(NavigationRoute.ServiceDetails(serviceId = serviceId))
+                    appState.navigateTo(NavigationRoute.ServiceDetails(serviceId = serviceId))
                 },
                 onMyBookingsClick = {
-                    navController.navigate(NavigationRoute.MyBookings)
+                    appState.navigateTo(NavigationRoute.MyBookings)
                 }
             )
         }
@@ -33,9 +44,9 @@ fun SomNavHost(navController: NavHostController = rememberNavController()) {
             val route: NavigationRoute.ServiceDetails = backStackEntry.toRoute()
             ServiceDetailsScreen(
                 serviceId = route.serviceId,
-                onBack = { navController.popBackStack() },
+                onBack = { appState.popBackStack() },
                 onContinueToBooking = { slotId, date, time ->
-                    navController.navigate(
+                    appState.navigateTo(
                         NavigationRoute.Booking(
                             serviceId = route.serviceId,
                             slotId = slotId,
@@ -57,7 +68,7 @@ fun SomNavHost(navController: NavHostController = rememberNavController()) {
             )
             BookingScreen(
                 args = args,
-                onBack = { navController.popBackStack() },
+                onBack = { appState.popBackStack() },
                 onViewMyBookings = {
                     navController.navigate(NavigationRoute.MyBookings) {
                         popUpTo(NavigationRoute.ServiceList)
@@ -68,7 +79,7 @@ fun SomNavHost(navController: NavHostController = rememberNavController()) {
 
         composable<NavigationRoute.MyBookings> {
             MyBookingsScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { appState.popBackStack() }
             )
         }
     }
