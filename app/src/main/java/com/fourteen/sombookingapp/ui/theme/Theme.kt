@@ -1,4 +1,4 @@
-package com.fourteen.sombookingapp.ui.theme
+﻿package com.fourteen.sombookingapp.ui.theme
 
 import android.app.Activity
 import android.os.Build
