@@ -7,7 +7,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 
 /**
- * State holder for top-level navigation state in SomBookingApp following Google's recommended architecture.
+ * State holder for top-level navigation state in SomBookingApp.
  */
 @Stable
 class SomAppState(

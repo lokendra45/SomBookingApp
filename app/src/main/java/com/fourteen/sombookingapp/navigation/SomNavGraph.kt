@@ -1,15 +1,15 @@
-﻿package com.fourteen.sombookingapp.navigation
+package com.fourteen.sombookingapp.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import com.fourteen.sombookingapp.ui.screens.BookingScreen
-import com.fourteen.sombookingapp.ui.screens.MyBookingsScreen
-import com.fourteen.sombookingapp.ui.screens.ServiceDetailsScreen
-import com.fourteen.sombookingapp.ui.screens.ServiceListScreen
-import com.fourteen.sombookingapp.viewmodel.BookingArgs
+import com.fourteen.sombookingapp.ui.screens.booking.BookingArgs
+import com.fourteen.sombookingapp.ui.screens.booking.BookingScreen
+import com.fourteen.sombookingapp.ui.screens.mybookings.MyBookingsScreen
+import com.fourteen.sombookingapp.ui.screens.servicedetails.ServiceDetailsScreen
+import com.fourteen.sombookingapp.ui.screens.servicelist.ServiceListScreen
 
 @Composable
 fun SomApp(
