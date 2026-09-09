@@ -3,6 +3,7 @@ package com.fourteen.sombookingapp.ui.components
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -26,6 +27,7 @@ fun SomTextField(
     trailingIcon: @Composable (() -> Unit)? = null,
     isError: Boolean = false,
     errorMessage: String? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     shape: Shape = RoundedCornerShape(16.dp)
 ) {
     OutlinedTextField(
@@ -38,6 +40,7 @@ fun SomTextField(
         trailingIcon = trailingIcon,
         isError = isError,
         supportingText = errorMessage?.let { { Text(it) } },
+        keyboardOptions = keyboardOptions,
         shape = shape,
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
