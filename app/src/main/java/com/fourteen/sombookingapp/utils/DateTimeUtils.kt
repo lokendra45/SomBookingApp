@@ -8,9 +8,6 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 import kotlin.time.Clock
 
-/**
- * Utility functions for date and time calculations using kotlinx-datetime.
- */
 object DateTimeUtils {
 
     data class DateOption(

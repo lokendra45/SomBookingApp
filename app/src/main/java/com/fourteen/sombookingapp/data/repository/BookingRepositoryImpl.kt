@@ -15,9 +15,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
-/**
- * Repository implementation that fetches booking data from the API service.
- */
 class BookingRepositoryImpl(
     private val apiService: BookingApiService
 ) : BookingRepository {

@@ -12,15 +12,11 @@ import kotlinx.coroutines.delay
 import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
 
-/**
- * Mock API service that uses fake data in memory for testing offline.
- */
 class MockBookingApiService : BookingApiService {
 
     private val bookings = mutableListOf<Booking>()
     private val bookedSlotIds = mutableSetOf<String>()
 
-    // Simulates fetching a list of services with optional search filtering
     override suspend fun getServices(query: String?): ApiResult<List<Service>> {
         simulateLatency()
 
@@ -37,7 +33,6 @@ class MockBookingApiService : BookingApiService {
         return ApiResult.Success(results)
     }
 
-    // Simulates fetching a single service by ID, including a hardcoded error case
     override suspend fun getServiceById(serviceId: String): ApiResult<Service> {
         simulateLatency()
         if (serviceId == "svc-error") return ApiResult.Error("Failed to load service details.", ApiErrorType.GENERIC)
@@ -91,13 +86,11 @@ class MockBookingApiService : BookingApiService {
         return ApiResult.Success(newBooking)
     }
 
-    // Returns the local in-memory list of created bookings
     override suspend fun getBookings(): ApiResult<List<Booking>> {
         simulateLatency()
         return ApiResult.Success(bookings.toList())
     }
 
-    // Validates required form fields for the mock request
     private fun validate(request: BookingRequest): String? {
         return when {
             request.customerName.isBlank() -> "Please enter your name."
@@ -108,7 +101,6 @@ class MockBookingApiService : BookingApiService {
         }
     }
 
-    // Adds artificial delay to simulate real network conditions
     private suspend fun simulateLatency() = delay((300L..900L).random().milliseconds)
 
 }

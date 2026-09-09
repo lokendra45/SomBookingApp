@@ -3,9 +3,6 @@ package com.fourteen.sombookingapp.navigation
 import kotlinx.serialization.Serializable
 
 
-/**
- * Type-safe routes for app navigation.
- */
 @Serializable
 sealed interface NavigationRoute {
     @Serializable
