@@ -46,3 +46,12 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Stash directory for screens and source files
+stash/
+**/stash/
+
+# Untracked custom modules / source directories
+/app/src/main/java/com/fourteen/sombookingapp/data/
+/app/src/main/java/com/fourteen/sombookingapp/ui/screens/
+/app/src/main/java/com/fourteen/sombookingapp/viewmodel/
