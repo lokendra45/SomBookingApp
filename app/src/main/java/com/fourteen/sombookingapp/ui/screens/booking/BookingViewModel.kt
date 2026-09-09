@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.fourteen.sombookingapp.data.api.ApiErrorType
 import com.fourteen.sombookingapp.data.api.ApiResult
 import com.fourteen.sombookingapp.data.model.BookingRequest
+import com.fourteen.sombookingapp.data.model.Booking
 import com.fourteen.sombookingapp.data.repository.BookingRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,9 +30,9 @@ data class BookingArgs(
  */
 private data class FormState(
     val customerName: String = "",
-    val contact: String = "",
+    val email: String = "",
     val nameError: String? = null,
-    val contactError: String? = null,
+    val emailError: String? = null,
     val isSubmitting: Boolean = false,
     val confirmedBookingId: String? = null,
     val confirmedBookingNumber: String? = null,
@@ -40,18 +41,20 @@ private data class FormState(
     val validationErrorMessage: String? = null
 )
 
+/**
+ * Manages the booking form for a specific service slot.
+ *
+ * Combines a reactive service fetch (retryable via [retryLoadService]) with
+ * user-entered form fields into a single [uiState] stream consumed by the UI.
+ */
 class BookingViewModel(
     private val args: BookingArgs,
     private val repository: BookingRepository
 ) : ViewModel() {
 
-    // Holds the reactive state of the user's input form
     private val _form = MutableStateFlow(FormState())
-    
-    // Controls fetching the service details from the repository
     private val _retryTrigger = MutableStateFlow(0)
 
-    // Maps the fetched service and current form inputs into a unified UI state
     @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<BookingUiState> = combine(
         _retryTrigger.flatMapLatest { repository.getServiceById(args.serviceId) },
@@ -66,9 +69,9 @@ class BookingViewModel(
                         date = args.date,
                         time = args.time,
                         customerName = form.customerName,
-                        contact = form.contact,
+                        contact = form.email,
                         nameError = form.nameError,
-                        contactError = form.contactError,
+                        contactError = form.emailError,
                         isSubmitting = form.isSubmitting,
                         conflictErrorMessage = form.conflictErrorMessage,
                         submitErrorMessage = form.submitErrorMessage,
@@ -84,15 +87,14 @@ class BookingViewModel(
         initialValue = BookingUiState.Loading
     )
 
-    // Holds the full Booking object after a successful submit.
-    private var _lastConfirmedBooking: com.fourteen.sombookingapp.data.model.Booking? = null
+    private var _lastConfirmedBooking: Booking? = null
 
     fun onNameChanged(name: String) {
         _form.update { it.copy(customerName = name, nameError = null) }
     }
 
-    fun onContactChanged(contact: String) {
-        _form.update { it.copy(contact = contact, contactError = null) }
+    fun onEmailChanged(email: String) {
+        _form.update { it.copy(email = email, emailError = null) }
     }
 
     fun resetToIdle() {
@@ -109,20 +111,14 @@ class BookingViewModel(
         _retryTrigger.update { it + 1 }
     }
 
-    // Validates the form and triggers the booking submission
+    /** Validates the form and, if valid, submits the booking to the repository. */
     fun submit() {
         val form = _form.value
-        val nameErr = validateName(form.customerName)
-        val contactErr = validateContact(form.contact)
+        val nameErr  = validateName(form.customerName)
+        val emailErr = validateEmail(form.email)
 
-        if (nameErr != null || contactErr != null) {
-            _form.update {
-                it.copy(
-                    nameError = nameErr,
-                    contactError = contactErr,
-                    validationErrorMessage = "Please fix errors in the form."
-                )
-            }
+        if (nameErr != null || emailErr != null) {
+            _form.update { it.copy(nameError = nameErr, emailError = emailErr) }
             return
         }
 
@@ -142,7 +138,7 @@ class BookingViewModel(
                 date = args.date,
                 time = args.time,
                 customerName = form.customerName.trim(),
-                contact = form.contact.trim()
+                contact = form.email.trim()
             )
 
             when (val result = repository.createBooking(request)) {
@@ -156,13 +152,14 @@ class BookingViewModel(
                         )
                     }
                 }
+
                 is ApiResult.Error -> {
-                    _form.update { state ->
-                        state.copy(
+                    _form.update {
+                        it.copy(
                             isSubmitting = false,
-                            conflictErrorMessage = if (result.type == ApiErrorType.CONFLICT) result.message else null,
-                            validationErrorMessage = if (result.type == ApiErrorType.VALIDATION) result.message else null,
-                            submitErrorMessage = if (result.type != ApiErrorType.CONFLICT && result.type != ApiErrorType.VALIDATION) result.message else null
+                            conflictErrorMessage   = result.message.takeIf { result.type == ApiErrorType.CONFLICT },
+                            validationErrorMessage = result.message.takeIf { result.type == ApiErrorType.VALIDATION },
+                            submitErrorMessage     = result.message.takeIf { result.type == ApiErrorType.GENERIC || result.type == ApiErrorType.NOT_FOUND }
                         )
                     }
                 }
@@ -171,18 +168,24 @@ class BookingViewModel(
     }
 
     private fun validateName(name: String): String? {
+        val trimmed = name.trim()
         return when {
-            name.isBlank() -> "Name is required."
-            name.trim().length < 2 -> "Name must be at least 2 characters."
-            else -> null
+            trimmed.isEmpty()   -> "Name is required."
+            trimmed.length < 2  -> "Name must be at least 2 characters."
+            trimmed.any { it.isDigit() } -> "Name must not contain numbers."
+            else                -> null
         }
     }
 
-    private fun validateContact(contact: String): String? {
+    private fun validateEmail(email: String): String? {
+        val trimmed = email.trim()
+        val parts   = trimmed.split('@')
         return when {
-            contact.isBlank() -> "Phone or email is required."
-            contact.trim().length < 5 -> "Please enter a valid phone or email."
-            else -> null
+            trimmed.isEmpty()                              -> "Email is required."
+            parts.size != 2 || parts[0].isEmpty()         -> "Enter a valid email address."
+            parts[1].isEmpty() || !parts[1].contains('.') -> "Email domain is invalid."
+            parts[1].endsWith('.')                         -> "Email domain must not end with a dot."
+            else                                           -> null
         }
     }
 }

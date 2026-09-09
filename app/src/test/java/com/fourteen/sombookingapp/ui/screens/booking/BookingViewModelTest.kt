@@ -82,7 +82,7 @@ class BookingViewModelTest {
         advanceUntilIdle()
 
         viewModel.onNameChanged("")
-        viewModel.onContactChanged("9800000000")
+        viewModel.onEmailChanged("ram@example.com")
         viewModel.submit()
 
         val state = viewModel.uiState.value as BookingUiState.Content
@@ -98,7 +98,7 @@ class BookingViewModelTest {
         advanceUntilIdle()
 
         viewModel.onNameChanged("Ram Bahadur")
-        viewModel.onContactChanged("9800000000")
+        viewModel.onEmailChanged("ram@example.com")
         viewModel.submit()
         advanceUntilIdle()
 
@@ -117,7 +117,7 @@ class BookingViewModelTest {
         advanceUntilIdle()
 
         viewModel.onNameChanged("Ram Bahadur")
-        viewModel.onContactChanged("9800000000")
+        viewModel.onEmailChanged("ram@example.com")
         viewModel.submit()
         advanceUntilIdle()
 

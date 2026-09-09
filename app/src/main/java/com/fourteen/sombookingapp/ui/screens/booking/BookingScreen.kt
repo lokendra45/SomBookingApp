@@ -14,8 +14,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -42,6 +42,8 @@ import com.fourteen.sombookingapp.ui.components.SomTonalCard
 import com.fourteen.sombookingapp.ui.components.SomTopAppBar
 
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import com.fourteen.sombookingapp.ui.components.SomTonalCard
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,7 +86,7 @@ fun BookingScreen(
                         onShowSnackbar = onShowSnackbar,
                         onClearError = viewModel::resetToIdle,
                         onNameChange = viewModel::onNameChanged,
-                        onContactChange = viewModel::onContactChanged,
+                        onContactChange = viewModel::onEmailChanged,
                         onSubmit = viewModel::submit
                     )
                 }
@@ -197,11 +199,12 @@ private fun BookingFormContent(
         SomTextField(
             value = data.contact,
             onValueChange = onContactChange,
-            label = "Phone or Email",
-            placeholder = "e.g. 9800000000",
+            label = "Email",
+            placeholder = "e.g. you@example.com",
             leadingIcon = {
-                Icon(Icons.Filled.Phone, contentDescription = null)
+                Icon(Icons.Filled.Email, contentDescription = null)
             },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             isError = data.contactError != null,
             errorMessage = data.contactError,
             modifier = Modifier

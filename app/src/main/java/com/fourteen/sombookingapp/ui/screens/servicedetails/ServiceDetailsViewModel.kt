@@ -13,62 +13,47 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
-private data class SelectionState(
-    val selectedDateIso: String = DateTimeUtils.getUpcomingDateOptions(7).first().isoDate,
-    val selectedSlot: TimeSlot? = null,
-    val serviceRetry: Int = 0,
-    val availabilityRetry: Int = 0
-)
-
+@OptIn(ExperimentalCoroutinesApi::class)
 class ServiceDetailsViewModel(
     private val serviceId: String,
     private val repository: BookingRepository
 ) : ViewModel() {
 
-    private val _selectionState = MutableStateFlow(SelectionState())
+    private val _selectedDateIso = MutableStateFlow(DateTimeUtils.getUpcomingDateOptions(7).first().isoDate)
+    private val _selectedSlot    = MutableStateFlow<TimeSlot?>(null)
+    private val _serviceRetry    = MutableStateFlow(0)
+    private val _availabilityRetry = MutableStateFlow(0)
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val serviceFlow = _selectionState
-        .map { it.serviceRetry }
-        .distinctUntilChanged()
+    // Re-fetches whenever retry is incremented
+    private val serviceFlow = _serviceRetry
         .flatMapLatest { repository.getServiceById(serviceId) }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val availabilityFlow = _selectionState
-        .map { it.selectedDateIso to it.availabilityRetry }
-        .distinctUntilChanged()
-        .flatMapLatest { (dateIso, _) -> repository.getAvailability(serviceId, dateIso) }
+    // Re-fetches whenever the selected date or retry changes
+    private val availabilityFlow = combine(_selectedDateIso, _availabilityRetry) { date, _ -> date }
+        .flatMapLatest { dateIso -> repository.getAvailability(serviceId, dateIso) }
 
     val uiState: StateFlow<ServiceDetailsUiState> = combine(
         serviceFlow,
         availabilityFlow,
-        _selectionState
-    ) { serviceResult, availabilityResult, selection ->
-        val availableDates = DateTimeUtils.getUpcomingDateOptions(7).toImmutableList()
+        _selectedDateIso,
+        _selectedSlot
+    ) { serviceResult, availabilityResult, selectedDateIso, selectedSlot ->
         when (serviceResult) {
-            is ApiResult.Error -> ServiceDetailsUiState.Error(serviceResult.message)
+            is ApiResult.Error   -> ServiceDetailsUiState.Error(serviceResult.message)
             is ApiResult.Success -> ServiceDetailsUiState.Success(
                 data = ServiceDetailsData(
-                    service = serviceResult.data,
-                    availableDates = availableDates,
-                    selectedDateIso = selection.selectedDateIso,
-                    selectedSlot = selection.selectedSlot,
-                    isLoadingAvailability = false,
-                    availableSlots = when (availabilityResult) {
-                        is ApiResult.Success -> availabilityResult.data.toImmutableList()
-                        is ApiResult.Error -> persistentListOf()
-                    },
-                    isSlotsEmpty = availabilityResult is ApiResult.Success && availabilityResult.data.isEmpty(),
-                    availabilityErrorMessage = when (availabilityResult) {
-                        is ApiResult.Success -> null
-                        is ApiResult.Error -> availabilityResult.message
-                    }
+                    service                  = serviceResult.data,
+                    availableDates           = DateTimeUtils.getUpcomingDateOptions(7).toImmutableList(),
+                    selectedDateIso          = selectedDateIso,
+                    selectedSlot             = selectedSlot,
+                    isLoadingAvailability    = false,
+                    availableSlots           = if (availabilityResult is ApiResult.Success) availabilityResult.data.toImmutableList() else persistentListOf(),
+                    isSlotsEmpty             = availabilityResult is ApiResult.Success && availabilityResult.data.isEmpty(),
+                    availabilityErrorMessage = if (availabilityResult is ApiResult.Error) availabilityResult.message else null
                 )
             )
         }
@@ -78,15 +63,16 @@ class ServiceDetailsViewModel(
         initialValue = ServiceDetailsUiState.Loading
     )
 
-    fun onDateSelected(dateIso: String) =
-        _selectionState.update { it.copy(selectedDateIso = dateIso, selectedSlot = null) }
+    fun onDateSelected(dateIso: String) {
+        _selectedDateIso.value = dateIso
+        _selectedSlot.value = null
+    }
 
-    fun onSlotSelected(slot: TimeSlot) =
-        _selectionState.update { it.copy(selectedSlot = slot) }
+    fun onSlotSelected(slot: TimeSlot) {
+        _selectedSlot.value = slot
+    }
 
-    fun retryService() =
-        _selectionState.update { it.copy(serviceRetry = it.serviceRetry + 1) }
-
-    fun retryAvailability() =
-        _selectionState.update { it.copy(availabilityRetry = it.availabilityRetry + 1) }
+    fun retryService()       = _serviceRetry.update { it + 1 }
+    fun retryAvailability()  = _availabilityRetry.update { it + 1 }
 }
+
