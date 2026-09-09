@@ -54,7 +54,7 @@ fun MyBookingsScreen(
             is MyBookingsUiState.Error -> ErrorView(
                 message = state.message,
                 modifier = Modifier.padding(padding),
-                onRetry = {}
+                onRetry = viewModel::retry
             )
             is MyBookingsUiState.Empty -> EmptyView(
                 "You don't have any bookings yet.",

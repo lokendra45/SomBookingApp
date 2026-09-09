@@ -10,10 +10,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlin.time.Duration.Companion.milliseconds
 
 class ServiceListViewModel(
@@ -23,8 +25,11 @@ class ServiceListViewModel(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
+    // Incrementing this triggers a fresh fetch via flatMapLatest
+    private val retryTrigger = MutableStateFlow(0)
+
     @OptIn(ExperimentalCoroutinesApi::class, kotlinx.coroutines.FlowPreview::class)
-    val uiState: StateFlow<ServiceListUiState> = _searchQuery
+    val uiState: StateFlow<ServiceListUiState> = combine(_searchQuery, retryTrigger) { query, _ -> query }
         .debounce(300L.milliseconds)
         .flatMapLatest { query ->
             repository.getServices(query.ifBlank { null }).map { result ->
@@ -53,9 +58,5 @@ class ServiceListViewModel(
         _searchQuery.value = query
     }
 
-    fun retry() {
-        val current = _searchQuery.value
-        _searchQuery.value = ""
-        _searchQuery.value = current
-    }
+    fun retry() = retryTrigger.update { it + 1 }
 }
