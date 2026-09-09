@@ -46,26 +46,18 @@ class MockBookingApiService : BookingApiService {
         return ApiResult.Success(service)
     }
 
-    // Simulates fetching time slots, marking already booked slots as unavailable
     override suspend fun getAvailability(serviceId: String, date: String): ApiResult<List<TimeSlot>> {
         simulateLatency()
-        
+
         if (!mockServices.any { it.id == serviceId }) return ApiResult.Error("Service not found.", ApiErrorType.NOT_FOUND)
 
-        val defaultTimes = listOf("09:00", "10:30", "12:00", "14:00", "15:30", "17:00")
-        
-        val slots = defaultTimes.map { time ->
+        val times = listOf("09:00", "10:30", "12:00", "14:00", "15:30", "17:00")
+
+        val slots = times.map { time ->
             val slotId = "$serviceId-$date-$time"
-            val isAvailable = !bookedSlotIds.contains(slotId)
-            
-            TimeSlot(
-                id = slotId,
-                date = date,
-                time = time,
-                available = isAvailable
-            )
+            TimeSlot(id = slotId, date = date, time = time, available = !bookedSlotIds.contains(slotId))
         }
-        
+
         return ApiResult.Success(slots)
     }
 

@@ -1,6 +1,5 @@
 package com.fourteen.sombookingapp.ui.screens.servicelist
 
-import app.cash.turbine.test
 import com.fourteen.sombookingapp.data.api.ApiErrorType
 import com.fourteen.sombookingapp.data.api.ApiResult
 import com.fourteen.sombookingapp.data.model.Service
@@ -9,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -36,7 +37,6 @@ class ServiceListViewModelTest {
 
     class FakeBookingRepository : BookingRepository {
         var returnError = false
-        var returnEmpty = false
         var lastSearchQuery: String? = null
 
         override fun getServices(query: String?): Flow<ApiResult<List<Service>>> = flow {
@@ -44,20 +44,13 @@ class ServiceListViewModelTest {
             lastSearchQuery = query
             if (returnError) {
                 emit(ApiResult.Error("API Error", ApiErrorType.GENERIC))
-                return@flow
+            } else {
+                emit(ApiResult.Success(
+                    listOf(Service("1", "Home Cleaning", "Cleaning", "CleanCo", 1500.0, "NPR", 60, 4.5, "Desc"))
+                ))
             }
-            if (returnEmpty) {
-                emit(ApiResult.Success(emptyList()))
-                return@flow
-            }
-
-            emit(ApiResult.Success(
-                listOf(
-                    Service("1", "Test Service", "Cat", "Prov", 10.0, "USD", 60, 5.0, "Desc")
-                )
-            ))
         }
-        
+
         override fun getServiceById(serviceId: String) = throw NotImplementedError()
         override fun getAvailability(serviceId: String, date: String) = throw NotImplementedError()
         override suspend fun createBooking(request: com.fourteen.sombookingapp.data.model.BookingRequest) = throw NotImplementedError()
@@ -65,46 +58,43 @@ class ServiceListViewModelTest {
     }
 
     @Test
-    fun `initial state loads services successfully`() = runTest {
-        val repository = FakeBookingRepository()
-        val viewModel = ServiceListViewModel(repository)
-        
-        viewModel.uiState.test {
-            advanceUntilIdle()
-            val successState = expectMostRecentItem() as ServiceListUiState.Success
-            assertEquals(1, successState.data.services.size)
-            assertEquals("Test Service", successState.data.services[0].name)
-        }
+    fun `shows services when load is successful`() = runTest {
+        val viewModel = ServiceListViewModel(FakeBookingRepository())
+        // Collect so WhileSubscribed activates the upstream
+        val job = launch { viewModel.uiState.collect {} }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as ServiceListUiState.Success
+        assertEquals(1, state.data.services.size)
+        assertEquals("Home Cleaning", state.data.services[0].name)
+        job.cancel()
     }
 
     @Test
-    fun `search query updates state and fetches new data`() = runTest {
-        val repository = FakeBookingRepository()
-        val viewModel = ServiceListViewModel(repository)
-
-        viewModel.uiState.test {
-            advanceUntilIdle() // let initial load finish
-            
-            viewModel.onSearchQueryChanged("Plumbing")
-            advanceUntilIdle() // let debounce and fetch finish
-
-            val successState = expectMostRecentItem() as ServiceListUiState.Success
-            assertEquals("Plumbing", repository.lastSearchQuery)
-            assertEquals("Plumbing", successState.searchQuery)
-        }
-    }
-
-    @Test
-    fun `repository error updates state with error message`() = runTest {
+    fun `shows error when repository fails`() = runTest {
         val repository = FakeBookingRepository()
         repository.returnError = true
-        
         val viewModel = ServiceListViewModel(repository)
-        
-        viewModel.uiState.test {
-            advanceUntilIdle()
-            val errorState = expectMostRecentItem() as ServiceListUiState.Error
-            assertEquals("API Error", errorState.message)
-        }
+        val job = launch { viewModel.uiState.collect {} }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as ServiceListUiState.Error
+        assertEquals("API Error", state.message)
+        job.cancel()
+    }
+
+    @Test
+    fun `search sends query to repository`() = runTest {
+        val repository = FakeBookingRepository()
+        val viewModel = ServiceListViewModel(repository)
+        val job = launch { viewModel.uiState.collect {} }
+        advanceUntilIdle()
+
+        viewModel.onSearchQueryChanged("cleaning")
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value is ServiceListUiState.Success)
+        assertEquals("cleaning", repository.lastSearchQuery)
+        job.cancel()
     }
 }

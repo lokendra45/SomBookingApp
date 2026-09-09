@@ -1,55 +1,45 @@
-# Architecture Overview
+# Architecture
 
-The SOM Booking App uses a modern Android architecture based on Google's recommended app architecture, ensuring a strict separation of concerns, unidirectional data flow (UDF), and highly testable, predictable behavior.
+## Overview
 
-## Core Layers & Responsibilities
+```
+Compose UI → ViewModel → Repository → API Service → Mock API
+```
 
-The application maintains a clear separation structured as:
-`Compose UI → ViewModel → Repository → API Service → Mock API`
+I split the app into these layers:
 
-### 1. UI Layer (Jetpack Compose)
-- **Role:** Displays application state and captures user input.
-- **Rules:** 
-  - Cannot contain business logic.
-  - Cannot directly instantiate Repositories or APIs.
-  - Must observe state via `lifecycle-aware state collection` (e.g., `collectAsStateWithLifecycle()`).
-- **Examples:** `ServiceListScreen`, `BookingScreen`.
+- **UI** — renders state, sends user actions to the ViewModel
+- **ViewModel** — holds screen state, calls the Repository
+- **Repository** — hides where the data comes from
+- **API Service** — interface that defines what operations are available
+- **Mock API** — implements the interface in memory, simulates real network responses
 
-### 2. Presentation Layer (ViewModel)
-- **Role:** Owns and manages the screen's state (`UiState`) and coordinates user actions with the data layer.
-- **Rules:**
-  - Maintains state in a `StateFlow` to ensure UDF.
-  - Exposes actions/intents that the UI can call (e.g., `onSearchQueryChanged()`, `submitBooking()`).
-  - Converts data layer results (like `ApiResult`) into UI-friendly state (Loading, Success, Error).
-- **Examples:** `ServiceListViewModel`, `BookingViewModel`.
+## Folder Structure
 
-### 3. Data Layer (Repository)
-- **Role:** Provides an application-facing data boundary and abstracts the origin of the data.
-- **Rules:**
-  - Translates network responses into domain models.
-  - Catches raw exceptions (like network timeouts or serialization errors) and converts them into safe `ApiResult.Error` wrappers, preventing crashes.
-- **Examples:** `BookingRepository`, `BookingRepositoryImpl`.
-
-### 4. Network Layer (API Service & Mock API)
-- **Role:** Defines the API contracts and handles remote data fetching.
-- **Rules:**
-  - `BookingApiService` defines the pure interface contracts.
-  - `MockBookingApiService` implements this interface completely in-memory, simulating network latency, API success, and exact HTTP-style error structures (like 404 Not Found or 409 Conflict).
-
----
+```
+app/
+  ui/
+    screens/          one folder per screen, screen + ViewModel together
+    components/       reusable Compose components
+  data/
+    api/              API interface and result types
+    repository/       Repository interface and implementation
+    mock/             Mock API and hardcoded data
+    model/            data classes
+  di/                 ViewModelFactory
+  navigation/         nav graph
+docs/
+```
 
 ## State Management
-State is managed using the **Unidirectional Data Flow (UDF)** pattern:
-1. **State flows down:** The `ViewModel` exposes a single `UiState` data class via a `StateFlow`. The Compose UI observes this state and recomposes when it changes.
-2. **Events flow up:** When a user interacts with the UI (e.g., clicks "Book"), the UI calls a method on the `ViewModel`. The `ViewModel` then updates its internal state (e.g., `isLoading = true`) and interacts with the Repository.
 
----
+Each screen has a sealed `UiState` (e.g. `Loading`, `Success`, `Error`). I expose it from the ViewModel as a `StateFlow` and collect it in Compose using `collectAsStateWithLifecycle`.
 
-## How to Replace the Mock API
-The architecture is designed to be completely decoupled from the mock implementation. 
+## How to swap in a real backend
 
-To replace the `MockBookingApiService` with a real backend:
-1. Create a real `Retrofit` service that implements the `BookingApiService` interface (or a similar interface).
-2. Update the `ViewModelFactory` (or your Dependency Injection module, like Hilt/Dagger) to provide the real `Retrofit` implementation to the `BookingRepositoryImpl` instead of instantiating `MockBookingApiService`.
+I designed the data layer so `BookingRepository` only depends on the `BookingApiService` interface — it never references `MockBookingApiService` directly. To replace the mock:
 
-Because the UI and ViewModels only depend on the `BookingRepository` interface, **zero changes** are required in the presentation or UI layers to switch from Mock to Production.
+1. Create a Retrofit implementation of `BookingApiService`.
+2. In `ViewModelFactory`, pass the Retrofit instance instead of `MockBookingApiService`.
+
+Nothing in the UI or ViewModels needs to change.

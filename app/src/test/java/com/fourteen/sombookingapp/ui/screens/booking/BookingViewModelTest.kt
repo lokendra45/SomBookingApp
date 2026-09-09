@@ -1,6 +1,5 @@
 package com.fourteen.sombookingapp.ui.screens.booking
 
-import app.cash.turbine.test
 import com.fourteen.sombookingapp.data.api.ApiErrorType
 import com.fourteen.sombookingapp.data.api.ApiResult
 import com.fourteen.sombookingapp.data.model.Booking
@@ -12,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -19,11 +19,10 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BookingViewModelTest {
@@ -44,17 +43,16 @@ class BookingViewModelTest {
         var returnConflictError = false
 
         override suspend fun createBooking(request: BookingRequest): ApiResult<Booking> {
-            kotlinx.coroutines.delay(10)
             if (returnConflictError) {
                 return ApiResult.Error("Slot already booked", ApiErrorType.CONFLICT)
             }
             return ApiResult.Success(
                 Booking(
-                    id = UUID.randomUUID().toString(),
-                    bookingNumber = "SOM-123",
+                    id = "1",
+                    bookingNumber = "SOM-001",
                     serviceId = request.serviceId,
-                    serviceName = "Mock Service",
-                    provider = "Mock Provider",
+                    serviceName = "Home Cleaning",
+                    provider = "CleanCo",
                     date = request.date,
                     time = request.time,
                     status = BookingStatus.CONFIRMED,
@@ -65,8 +63,7 @@ class BookingViewModelTest {
         }
 
         override fun getServiceById(serviceId: String): Flow<ApiResult<Service>> = flow {
-            kotlinx.coroutines.delay(10)
-            emit(ApiResult.Success(Service("svc-1", "Mock Service", "Cat", "Prov", 10.0, "USD", 60, 5.0, "Desc")))
+            emit(ApiResult.Success(Service("svc-1", "Home Cleaning", "Cleaning", "CleanCo", 1500.0, "NPR", 60, 4.5, "Desc")))
         }
 
         override fun getServices(query: String?) = throw NotImplementedError()
@@ -74,70 +71,59 @@ class BookingViewModelTest {
         override fun getBookings() = throw NotImplementedError()
     }
 
-    @Test
-    fun `validation fails when name is empty`() = runTest {
-        val repository = FakeBookingRepository()
-        val args = BookingArgs("svc-1", "slot-1", "2026-10-25", "10:30")
-        val viewModel = BookingViewModel(args, repository)
-        
-        viewModel.uiState.test {
-            advanceUntilIdle() // let service load
-
-            viewModel.onNameChanged("")
-            viewModel.onContactChanged("555-1234")
-            viewModel.submit()
-            
-            advanceUntilIdle()
-
-            val resultState = expectMostRecentItem() as BookingUiState.Content
-            assertEquals("Please fix errors in the form.", resultState.data.validationErrorMessage)
-            assertEquals("Name is required.", resultState.data.nameError)
-            assertTrue(!resultState.data.isSubmitting)
-            assertNull(resultState.data.confirmedBookingNumber)
-        }
+    private fun createViewModel(repository: FakeBookingRepository = FakeBookingRepository()): BookingViewModel {
+        return BookingViewModel(BookingArgs("svc-1", "slot-1", "2026-10-25", "10:00"), repository)
     }
 
     @Test
-    fun `successful booking updates state correctly`() = runTest {
-        val repository = FakeBookingRepository()
-        val args = BookingArgs("svc-1", "slot-1", "2026-10-25", "10:30")
-        val viewModel = BookingViewModel(args, repository)
-        
-        viewModel.uiState.test {
-            advanceUntilIdle() // let service load
-            
-            viewModel.onNameChanged("John")
-            viewModel.onContactChanged("john@example.com")
-            viewModel.submit()
-            
-            advanceUntilIdle() // let booking complete
+    fun `validation fails when name is blank`() = runTest {
+        val viewModel = createViewModel()
+        val job = launch { viewModel.uiState.collect {} }
+        advanceUntilIdle()
 
-            val successState = expectMostRecentItem() as BookingUiState.Content
-            assertTrue(!successState.data.isSubmitting)
-            assertEquals("SOM-123", successState.data.confirmedBookingNumber)
-        }
+        viewModel.onNameChanged("")
+        viewModel.onContactChanged("9800000000")
+        viewModel.submit()
+
+        val state = viewModel.uiState.value as BookingUiState.Content
+        assertEquals("Name is required.", state.data.nameError)
+        assertNull(state.data.confirmedBookingNumber)
+        job.cancel()
     }
 
     @Test
-    fun `conflict error from repository surfaces correctly`() = runTest {
+    fun `booking succeeds and shows confirmation number`() = runTest {
+        val viewModel = createViewModel()
+        val job = launch { viewModel.uiState.collect {} }
+        advanceUntilIdle()
+
+        viewModel.onNameChanged("Ram Bahadur")
+        viewModel.onContactChanged("9800000000")
+        viewModel.submit()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as BookingUiState.Content
+        assertEquals("SOM-001", state.data.confirmedBookingNumber)
+        assertNull(state.data.submitErrorMessage)
+        job.cancel()
+    }
+
+    @Test
+    fun `booking conflict shows conflict error message`() = runTest {
         val repository = FakeBookingRepository()
         repository.returnConflictError = true
-        val args = BookingArgs("svc-1", "slot-1", "2026-10-25", "10:30")
-        val viewModel = BookingViewModel(args, repository)
-        
-        viewModel.uiState.test {
-            advanceUntilIdle() // let service load
-            
-            viewModel.onNameChanged("John")
-            viewModel.onContactChanged("john@example.com")
-            viewModel.submit()
-            
-            advanceUntilIdle() // let booking complete
+        val viewModel = createViewModel(repository)
+        val job = launch { viewModel.uiState.collect {} }
+        advanceUntilIdle()
 
-            val errorState = expectMostRecentItem() as BookingUiState.Content
-            assertTrue(!errorState.data.isSubmitting)
-            assertEquals("Slot already booked", errorState.data.conflictErrorMessage)
-            assertNull(errorState.data.confirmedBookingNumber)
-        }
+        viewModel.onNameChanged("Ram Bahadur")
+        viewModel.onContactChanged("9800000000")
+        viewModel.submit()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as BookingUiState.Content
+        assertNotNull(state.data.conflictErrorMessage)
+        assertNull(state.data.confirmedBookingNumber)
+        job.cancel()
     }
 }

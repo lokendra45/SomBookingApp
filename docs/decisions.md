@@ -1,45 +1,29 @@
-# Technical Decisions
+# Decisions
 
-This document outlines the key technical and architectural decisions made during the development of the SOM Booking Module, focusing on why specific approaches were chosen over alternatives.
+## 1. Mock API as a proper interface implementation
 
-## 1. Using a Dedicated Mock API Service Layer
-**Decision:** We implemented a `MockBookingApiService` class that strictly implements the `BookingApiService` interface, rather than hardcoding JSON or mock data directly into the ViewModels or UI screens.
+I made `MockBookingApiService` implement the `BookingApiService` interface, the same way a Retrofit service would. This means I can replace it with a real backend by changing one line in `ViewModelFactory` — nothing else needs to change.
 
-**Why it was selected:**
-- **Replaceability:** By depending only on the `BookingApiService` interface, the UI and ViewModels are completely decoupled from the data source. When the real backend is ready, we simply swap the dependency injection to provide a Retrofit implementation. Zero UI or ViewModel code will need to change.
-- **Realistic Behavior:** The Mock API can simulate latency (`delay()`), HTTP error codes, and dynamic state (like saving a booking in memory so it appears in the "My Bookings" list). Hardcoded JSON cannot do this.
+I considered just hardcoding data inside the ViewModel, but that would mix data and presentation and make it impossible to test properly.
 
-**Alternatives considered:** 
-- Hardcoding list data inside `ServiceListViewModel`.
-- **Why rejected:** It violates the separation of concerns, makes the app impossible to test cleanly, and requires major refactoring when real APIs are introduced.
+---
 
-## 2. Managing UI State with `StateFlow` and UDF
-**Decision:** Every screen is backed by a ViewModel that exposes a single `UiState` data class via a `StateFlow`. We use Unidirectional Data Flow (UDF) where the UI only observes state and sends events.
+## 2. Single `UiState` sealed class per screen
 
-**Why it was selected:**
-- **Predictability:** The UI becomes a pure function of the state. It is impossible for the UI to enter an invalid or conflicting visual state.
-- **Lifecycle Safety:** By collecting state using Compose's `collectAsStateWithLifecycle()`, we ensure that background processing and state emission pause when the app is in the background, preventing resource leaks.
+Each screen has one sealed class (e.g. `ServiceListUiState`) covering all possible states: `Loading`, `Success`, `Error`. I expose it as one `StateFlow<UiState>` from the ViewModel.
 
-**Alternatives considered:** 
-- Exposing multiple `LiveData` objects (e.g., `isLoading`, `errorMessage`, `serviceList`).
-- **Why rejected:** Multiple observable fields can lead to conflicting states (e.g., `isLoading = true` but `errorMessage` is also populated). A single `UiState` data class guarantees mutually exclusive states.
+This prevents conflicting states, like showing a loading spinner and an error message at the same time, which can happen when you have multiple separate state variables instead of one sealed class.
 
-## 3. Extracting Mock Data into a Separate File (`MockData.kt`)
-**Decision:** We extracted the large list of hardcoded mock services out of the `MockBookingApiService` class and into a dedicated `MockData.kt` file.
+---
 
-**Why it was selected:**
-- **Readability & Maintenance:** The `MockBookingApiService` is strictly responsible for *behavior* (latency, validation, error throwing). Keeping a 60-line block of data inside it distracted from the business logic. Moving the data out keeps the service class small, focused, and easy to read.
+## 3. Mock data in a separate file
 
-**Alternatives considered:**
-- Keeping the data in a `companion object` inside the service.
-- **Why rejected:** It bloated the file size and mixed data definition with business logic execution.
+I moved the hardcoded services list into `MockData.kt` instead of keeping it inside `MockBookingApiService`.
 
-## 4. Universal `!contains()` vs Kotlin `!in` operator
-**Decision:** We consciously chose to use `!bookedSlotIds.contains(slotId)` instead of the Kotlin-specific `slotId !in bookedSlotIds` operator when checking for slot availability.
+This keeps the service class focused on behavior (simulating latency, errors, slot conflicts) and makes the data easy to find and update separately.
 
-**Why it was selected:**
-- **Clarity:** While `!in` is idiomatic syntactic sugar in Kotlin, `.contains()` is universally understood across all major programming languages (Java, Python, C#, etc.). It makes the code instantly readable and explicable in a cross-functional team environment.
+---
 
-**Alternatives considered:**
-- Using the idiomatic `!in` operator.
-- **Why rejected:** It was slightly less explicit when explaining the code logic step-by-step.
+## 4. `StateFlow` with `WhileSubscribed`
+
+I used `stateIn(WhileSubscribed(5_000))` so the upstream flow stops when no UI is collecting (e.g. the app goes to the background). This avoids doing unnecessary work and follows Android's recommended lifecycle practices.

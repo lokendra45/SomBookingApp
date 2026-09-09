@@ -1,64 +1,35 @@
-# Setup & Build Instructions
+# Setup
 
-This document provides instructions on how to set up, build, test, and run the SOM Booking Module application.
+## Requirements
 
-## Prerequisites
-- **Android Studio:** Android Studio Koala (or newer recommended).
-- **Java Development Kit (JDK):** JDK 17 (embedded in modern Android Studio).
-- **Android SDK:** API 34.
-- **Gradle:** Handled automatically by the Gradle Wrapper (`gradlew`).
+- Android Studio Koala or newer
+- Android SDK 34
+- JDK 17 (bundled with Android Studio)
 
-## Setup & Build Steps
-1. **Clone the Repository:**
-   ```bash
-   git clone <repository_url>
-   cd SomBookingApp
-   ```
-2. **Open in Android Studio:**
-   - Launch Android Studio.
-   - Select **File -> Open...**
-   - Navigate to the cloned `SomBookingApp` directory and select it.
-   - Wait for Gradle sync to complete.
+## Run the app
 
-3. **Build the Application:**
-   - To build via Android Studio UI: Click the **"Make Project"** (Hammer) icon.
-   - To build via command line: 
-     ```bash
-     ./gradlew assembleDebug
-     ```
+1. Clone the repo and open it in Android Studio.
+2. Wait for Gradle sync to finish.
+3. Connect a device or start an emulator.
+4. Click **Run**.
 
-## Running the Application
-1. Connect a physical Android device (with USB Debugging enabled) or start an Android Emulator.
-2. In Android Studio, click the **"Run 'app'"** (Green Play) button.
-3. Alternatively, via command line:
-   ```bash
-   ./gradlew installDebug
-   ```
+Or from the terminal:
+```bash
+./gradlew installDebug
+```
 
-## Running Tests
-This project includes JUnit tests to verify ViewModel state transitions and data validation.
+## Run tests
 
-1. **Run via Android Studio UI:**
-   - Right-click the `app/src/test` directory in the Project view.
-   - Select **"Run 'Tests in 'sombookingapp''"**.
-2. **Run via command line:**
-   ```bash
-   ./gradlew testDebugUnitTest
-   ```
-3. Test reports will be generated in `app/build/reports/tests/testDebugUnitTest/index.html`.
+```bash
+./gradlew testDebugUnitTest
+```
 
-## APK Generation Steps
-If you need to generate a standalone APK for evaluation:
+Report is at: `app/build/reports/tests/testDebugUnitTest/index.html`
 
-1. **Generate Debug APK:**
-   ```bash
-   ./gradlew assembleDebug
-   ```
-2. **Locate the APK:**
-   The generated APK will be located at:
-   `app/build/outputs/apk/debug/app-debug.apk`
+## Build the APK
 
-3. **Install the APK via ADB (optional):**
-   ```bash
-   adb install app/build/outputs/apk/debug/app-debug.apk
-   ```
+```bash
+./gradlew assembleDebug
+```
+
+Output: `app/build/outputs/apk/debug/app-debug.apk`
