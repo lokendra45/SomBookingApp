@@ -1,7 +1,16 @@
 package com.fourteen.sombookingapp.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
@@ -15,7 +24,17 @@ import com.fourteen.sombookingapp.ui.screens.servicelist.ServiceListScreen
 fun SomApp(
     appState: SomAppState = rememberSomAppState()
 ) {
-    SomNavHost(appState = appState)
+    Box(modifier = Modifier.fillMaxSize()) {
+        SomNavHost(appState = appState)
+        
+        SnackbarHost(
+            hostState = appState.snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(bottom = 16.dp)
+        )
+    }
 }
 
 @Composable
@@ -68,6 +87,7 @@ fun SomNavHost(
             )
             BookingScreen(
                 args = args,
+                onShowSnackbar = { message -> appState.showSnackbar(message) },
                 onBack = { appState.popBackStack() },
                 onViewMyBookings = {
                     navController.navigate(NavigationRoute.MyBookings) {

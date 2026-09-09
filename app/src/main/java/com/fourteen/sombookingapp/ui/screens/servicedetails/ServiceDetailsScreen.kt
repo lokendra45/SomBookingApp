@@ -4,9 +4,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -29,6 +31,7 @@ import com.fourteen.sombookingapp.ui.components.RatingBadge
 import com.fourteen.sombookingapp.ui.components.SomElevatedCard
 import com.fourteen.sombookingapp.ui.components.SomPrimaryButton
 import com.fourteen.sombookingapp.ui.components.SomSectionHeader
+import com.fourteen.sombookingapp.ui.components.SomTonalCard
 import com.fourteen.sombookingapp.ui.components.SomTopAppBar
 import com.fourteen.sombookingapp.ui.components.TimeSlotGrid
 
@@ -84,46 +87,55 @@ private fun ServiceDetailsContent(
     onContinueToBooking: (slotId: String, date: String, time: String) -> Unit
 ) {
     val service = data.service
-    Column(modifier = modifier) {
-        SomElevatedCard(
-            modifier = Modifier.padding(16.dp),
-            shape = RoundedCornerShape(24.dp),
-            elevation = 3.dp
-        ) {
+    Column(modifier = modifier.fillMaxSize()) {
+        SomTonalCard(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(service.name, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    service.name, 
+                    style = MaterialTheme.typography.headlineSmall, 
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
                 RatingBadge(rating = service.rating)
             }
             Text(
                 "${service.provider} · ${service.category}",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(service.description, style = MaterialTheme.typography.bodyMedium)
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                service.description, 
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(modifier = Modifier.height(20.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     "${service.currency} ${"%.2f".format(service.price)}",
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
-                Text(
-                    "${service.durationMinutes} min",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+                androidx.compose.material3.Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Text(
+                        "${service.durationMinutes} min",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
             }
         }
-
-        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
         SomSectionHeader(title = "Select Date")
         DateSelector(
@@ -150,15 +162,21 @@ private fun ServiceDetailsContent(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        SomPrimaryButton(
-            text = "Continue to Booking",
-            onClick = {
-                data.selectedSlot?.let {
-                    onContinueToBooking(it.id, it.date, it.time)
-                }
-            },
-            enabled = data.selectedSlot != null,
-            modifier = Modifier.padding(16.dp)
-        )
+        androidx.compose.material3.Surface(
+            shadowElevation = 8.dp,
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            SomPrimaryButton(
+                text = "Continue to Booking",
+                onClick = {
+                    data.selectedSlot?.let {
+                        onContinueToBooking(it.id, it.date, it.time)
+                    }
+                },
+                enabled = data.selectedSlot != null,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
     }
 }

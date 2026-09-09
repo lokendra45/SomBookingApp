@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fourteen.sombookingapp.data.model.Booking
 import com.fourteen.sombookingapp.di.MyBookingsViewModelFactory
+import com.fourteen.sombookingapp.ui.components.BookingCard
 import com.fourteen.sombookingapp.ui.components.EmptyView
 import com.fourteen.sombookingapp.ui.components.ErrorView
 import com.fourteen.sombookingapp.ui.components.LoadingView
@@ -75,27 +76,4 @@ fun MyBookingsScreen(
     }
 }
 
-@Composable
-private fun BookingCard(booking: Booking) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(booking.bookingNumber, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                StatusBadge(status = booking.status)
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(booking.serviceName, style = MaterialTheme.typography.titleLarge)
-            Text(booking.provider, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text("${booking.date} at ${booking.time}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary)
-        }
-    }
-}
+

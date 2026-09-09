@@ -78,3 +78,22 @@ fun SomOutlinedCard(
         }
     }
 }
+
+@Composable
+fun SomTonalCard(
+    modifier: Modifier = Modifier,
+    shape: Shape = RoundedCornerShape(24.dp),
+    contentPadding: Dp = 24.dp,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    androidx.compose.material3.Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = shape,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+    ) {
+        Column(modifier = Modifier.padding(contentPadding), content = content)
+    }
+}
